@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/arwos/artifactory/internal/proxy/db"
@@ -16,21 +18,10 @@ var Plugin = plugins.Plugin{
 	Inject: NewStorages,
 }
 
-type (
-	Storages struct {
-		db db.DB
-
-		cache *Cache
-	}
-
-	Store struct {
-		ID       int64
-		Lifetime int64
-		Name     string
-		Code     string
-		Groups   map[int64]struct{}
-	}
-)
+type Storages struct {
+	db    db.DB
+	cache *Cache
+}
 
 func NewStorages(db db.DB) *Storages {
 	return &Storages{
@@ -83,6 +74,19 @@ func (v *Storages) reloadStoreFromDB(ctx context.Context, name string) (*Store, 
 		Code:     code,
 		Groups:   make(map[int64]struct{}, 0),
 	}
+
+	err = v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
+		q.SQL("SELECT `group_id` FROM `storage_group` WHERE `storage_id` = ? LIMIT 1;", s.ID)
+		q.Bind(func(bind orm.Scanner) error {
+			var gid int64
+			if err = bind.Scan(&gid); err != nil {
+				return err
+			}
+			s.Groups[gid] = struct{}{}
+			return nil
+		})
+	})
+
 	v.cache.Set(s)
 	return &s, nil
 }
@@ -128,4 +132,16 @@ func (v *Storages) AppendStorageToGroups(ctx context.Context, name string, group
 			q.Params(s.ID, gid)
 		}
 	})
+}
+
+var storeNameRex = regexp.MustCompile(`^[0-9a-z\-]+$`)
+
+func Validate(name string) bool {
+	name = strings.ToLower(name)
+	switch name {
+	case "admin", "ui":
+		return false
+	default:
+		return storeNameRex.MatchString(name)
+	}
 }

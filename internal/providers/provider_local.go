@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -58,34 +60,41 @@ func (v *LocalProvider) GetFile(filename string, ctx web.Context) {
 		ctx.Error(http.StatusInternalServerError, err)
 		return
 	}
-	defer resp.Close()
+	defer resp.Close() //nolint:errcheck
 
 	contentType := static.DetectContentType(filename, nil)
 	ctx.Header().Set("Content-Type", contentType)
 	ctx.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(filename)))
 	ctx.Response().WriteHeader(http.StatusOK)
-	io.Copy(ctx.Response(), resp)
+	io.Copy(ctx.Response(), resp) //nolint:errcheck
 }
 
-func (v *LocalProvider) SaveFile(filename string, r io.ReadCloser) error {
+func (v *LocalProvider) SaveFile(filename string, r io.ReadCloser) (string, error) {
 	origFile := filepath.Join(v.conf.Setting, filename)
 	if file.Exist(origFile) {
-		return fmt.Errorf("file alredy exist")
+		return "", fmt.Errorf("file alredy exist")
 	}
 
 	err := os.MkdirAll(filepath.Dir(origFile), 0744)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	dist, err := os.OpenFile(origFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = io.Copy(dist, r)
+	hash := sha1.New()
+	mw := io.MultiWriter(dist, hash)
+	_, err = io.Copy(mw, r)
+
 	err = errors.Wrap(err, r.Close(), dist.Close())
-	return err
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func (v *LocalProvider) DeleteFile(filename string) error {

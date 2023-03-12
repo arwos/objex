@@ -9,5 +9,5 @@ CREATE TABLE `props`
     PRIMARY KEY (`id`),
     UNIQUE KEY `files_id_name` (`files_id`,`name`),
     KEY          `files_id` (`files_id`),
-    CONSTRAINT `props_ibfk_1` FOREIGN KEY (`files_id`) REFERENCES `files` (`id`)
+    CONSTRAINT `props_ibfk_2` FOREIGN KEY (`files_id`) REFERENCES `files` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

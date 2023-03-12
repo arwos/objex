@@ -35,4 +35,4 @@ store_providers:
       type: local
       code: loc
       prefix: ""
-      setting: /tmp/artifacts
+      setting: "/tmp/artifacts"

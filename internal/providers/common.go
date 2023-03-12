@@ -23,7 +23,7 @@ type Provider interface {
 	Code() string
 	Check() error
 	GetFile(filename string, ctx web.Context)
-	SaveFile(filename string, r io.ReadCloser) error
+	SaveFile(filename string, r io.ReadCloser) (string, error)
 	DeleteFile(filename string) error
 }
 

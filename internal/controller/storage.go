@@ -1,8 +1,10 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/arwos/artifactory/internal/storages/storage"
 	"github.com/deweppro/goppy/plugins/web"
 )
 
@@ -17,6 +19,11 @@ func (v *Controller) CreateStorage(c web.Context) {
 	model := NewStorageModel{}
 	if err := c.BindJSON(&model); err != nil {
 		c.Error(http.StatusBadRequest, err)
+		return
+	}
+
+	if !storage.Validate(model.Name) {
+		c.Error(http.StatusBadRequest, fmt.Errorf("invalid storage name use regexp [0-9a-zA-Z\\-]"))
 		return
 	}
 

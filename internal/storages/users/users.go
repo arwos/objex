@@ -2,12 +2,15 @@ package users
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha512"
 	"fmt"
 	"time"
 
 	"github.com/arwos/artifactory/internal/proxy/db"
 	"github.com/deweppro/go-sdk/app"
 	"github.com/deweppro/go-sdk/orm"
+	"github.com/deweppro/go-sdk/random"
 	"github.com/deweppro/go-sdk/routine"
 	"github.com/deweppro/goppy/plugins"
 	"golang.org/x/crypto/bcrypt"
@@ -25,10 +28,12 @@ type (
 	}
 
 	User struct {
-		ID     int64
-		Login  string
-		Passwd []byte
-		Groups map[int64]struct{}
+		ID       int64
+		Login    string
+		Passwd   []byte
+		TempKey  []byte
+		TempHash []byte
+		Groups   map[int64]struct{}
 	}
 )
 
@@ -50,15 +55,20 @@ func (v *Users) Down() error {
 	return nil
 }
 
-func (v *Users) Get(ctx context.Context, login string) (*User, error) {
-	if u, ok := v.cache.Get(login); ok {
-		return &u, nil
+func (v *Users) Get(ctx context.Context, login string) (User, error) {
+	u, ok := v.cache.Get(login)
+	if ok {
+		return u, nil
 	}
 	u, err := v.reloadUserFromDB(ctx, login)
-	return u, err
+	if err != nil {
+		return User{}, err
+	}
+	v.cache.Set(u)
+	return u, nil
 }
 
-func (v *Users) reloadUserFromDB(ctx context.Context, login string) (*User, error) {
+func (v *Users) reloadUserFromDB(ctx context.Context, login string) (User, error) {
 	var (
 		uid             int64
 		ulogin, upasswd string
@@ -70,17 +80,19 @@ func (v *Users) reloadUserFromDB(ctx context.Context, login string) (*User, erro
 		})
 	})
 	if err != nil {
-		return nil, err
+		return User{}, err
 	}
 	if uid == 0 {
-		return nil, fmt.Errorf("user not found")
+		return User{}, fmt.Errorf("user not found")
 	}
 
 	u := User{
-		ID:     uid,
-		Login:  upasswd,
-		Passwd: []byte(upasswd),
-		Groups: make(map[int64]struct{}, 0),
+		ID:       uid,
+		Login:    login,
+		Passwd:   []byte(upasswd),
+		TempKey:  random.Bytes(64),
+		TempHash: nil,
+		Groups:   make(map[int64]struct{}, 0),
 	}
 
 	err = v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
@@ -95,10 +107,9 @@ func (v *Users) reloadUserFromDB(ctx context.Context, login string) (*User, erro
 		})
 	})
 	if err != nil {
-		return nil, err
+		return User{}, err
 	}
-	v.cache.Set(u)
-	return &u, nil
+	return u, nil
 }
 
 func (v *Users) ValidateUserPasswd(ctx context.Context, login, passwd string) bool {
@@ -106,8 +117,26 @@ func (v *Users) ValidateUserPasswd(ctx context.Context, login, passwd string) bo
 	if err != nil {
 		return false
 	}
-	err = bcrypt.CompareHashAndPassword(u.Passwd, []byte(passwd))
-	return err == nil
+
+	bp := []byte(passwd)
+
+	mac := hmac.New(sha512.New, u.TempKey)
+	mac.Write(bp)
+	hash := mac.Sum(nil)
+
+	if len(u.TempHash) > 0 && hmac.Equal(u.TempHash, hash) {
+		return true
+	}
+
+	err = bcrypt.CompareHashAndPassword(u.Passwd, bp)
+	if err != nil {
+		return false
+	}
+
+	u.TempHash = hash
+	v.cache.Set(u)
+
+	return true
 }
 
 func (v *Users) HasUserInGroup(ctx context.Context, login string, groups ...int64) bool {
@@ -126,7 +155,7 @@ func (v *Users) HasUserInGroup(ctx context.Context, login string, groups ...int6
 }
 
 func (v *Users) CreateUser(ctx context.Context, login, passwd string) error {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(passwd), 10)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(passwd), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}

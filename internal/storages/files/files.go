@@ -100,7 +100,8 @@ func (v *Files) AddFile(ctx context.Context, sid int64, filename, hash string, p
 		var id int64
 		v.Exec(func(e orm.Executor) {
 			e.SQL("INSERT INTO `files` (`storage_id`, `name`, `hash`, `created_at`, `updated_at`) "+
-				"VALUES (?, ?, ?, now(), now());", sid, filename, hash)
+				"VALUES (?, ?, ?, now(), now()) ON DUPLICATE KEY UPDATE "+
+				"`name` = VALUES(`name`), `updated_at` = VALUES(`updated_at`);", sid, filename, hash)
 			e.Bind(func(result orm.Result) error {
 				if result.RowsAffected == 0 {
 					return fmt.Errorf("file record error")
@@ -112,10 +113,25 @@ func (v *Files) AddFile(ctx context.Context, sid int64, filename, hash string, p
 
 		v.Exec(func(e orm.Executor) {
 			e.SQL("INSERT INTO `props` (`files_id`, `name`, `value`, `created_at`, `updated_at`) " +
-				"VALUES (?, ?, ?, now(), now());")
+				"VALUES (?, ?, ?, now(), now()) ON DUPLICATE KEY UPDATE " +
+				"`value` = VALUES(`value`), `updated_at` = VALUES(`updated_at`);")
 			for key := range props {
 				e.Params(id, key, props.Get(key))
 			}
 		})
 	})
+}
+
+func (v *Files) HasFile(ctx context.Context, sid int64, filename string) bool {
+	var id int64
+	err := v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
+		q.SQL("SELECT `id` FROM `files` WHERE `storage_id` = ? AND `name` = ?;", sid, filename)
+		q.Bind(func(bind orm.Scanner) error {
+			return bind.Scan(&id)
+		})
+	})
+	if err != nil {
+		return false
+	}
+	return id > 0
 }

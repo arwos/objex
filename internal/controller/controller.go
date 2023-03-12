@@ -38,6 +38,7 @@ func (v *Controller) Up() error {
 	route := v.routes.Main()
 
 	route.Post("/{storage}/#", v.UploadFile)
+	route.Get("/{storage}/#", v.DownloadFile)
 
 	apiV1 := route.Collection("/api/v1")
 	apiV1.Post("users/new", v.CreateUser)
@@ -46,6 +47,7 @@ func (v *Controller) Up() error {
 	apiV1.Get("groups/list", v.ListGroup)
 	apiV1.Post("storage/new", v.CreateStorage)
 	apiV1.Post("storage/group/add", v.AddStorageGroup)
+	apiV1.Post("search/props", v.SearchByProps)
 
 	return nil
 }

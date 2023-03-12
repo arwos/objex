@@ -1,6 +1,8 @@
 package users
 
-import "sync"
+import (
+	"sync"
+)
 
 type Cache struct {
 	cache map[string]User

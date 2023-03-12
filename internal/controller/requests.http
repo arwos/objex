@@ -1,0 +1,66 @@
+
+POST http://localhost:8080/api/v1/users/new
+Content-Type: application/json
+
+{
+  "login": "uuu",
+  "passwd": "uuu"
+}
+
+###
+
+POST http://localhost:8080/api/v1/groups/new
+Content-Type: application/json
+
+{
+  "name": "Group 1"
+}
+
+###
+
+POST http://localhost:8080/api/v1/users/group/add
+Content-Type: application/json
+
+{
+  "login": "uuu",
+  "ids": [2]
+}
+
+###
+
+GET http://localhost:8080/api/v1/groups/list
+Accept: application/json
+
+###
+
+POST http://localhost:8080/api/v1/storage/new
+Content-Type: application/json
+
+{
+  "name": "store-1",
+  "code": "loc",
+  "lifetime": 0
+}
+
+###
+
+POST http://localhost:8080/api/v1/storage/group/add
+Content-Type: application/json
+
+{
+  "name": "store-1",
+  "ids": [2]
+}
+
+###
+
+POST http://localhost:8080/store-1/test/111.txt?k1=aaa&k2=bbb
+Content-Type: application/octet-stream
+Authorization: Basic dXV1OnV1dQ==
+
+fffffffffffffffffffffffff
+
+###
+
+
+

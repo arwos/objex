@@ -6,6 +6,7 @@ CREATE TABLE `user_group`
     `created_at` datetime NOT NULL,
     `updated_at` datetime NOT NULL,
     PRIMARY KEY (`id`),
+    UNIQUE KEY `group_id_user_id` (`group_id`,`user_id`),
     KEY          `user_id` (`user_id`),
     KEY          `group_id` (`group_id`),
     CONSTRAINT `user_group_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),

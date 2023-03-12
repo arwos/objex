@@ -11,7 +11,7 @@ mysql:
     - name: main
       host: 127.0.0.1
       port: 3306
-      schema: test_database
+      schema: test
       user: test
       password: test
       timezone: UTC
@@ -35,3 +35,4 @@ store_providers:
       type: local
       code: loc
       prefix: ""
+      setting: /tmp/artifacts

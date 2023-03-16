@@ -12,8 +12,8 @@
     "icon-build": "pwa-asset-generator src/logo.svg src/assets/icons -m src/manifest.webmanifest -v /assets/icons -f -c -w -s false -o false -p 2%"
   },
   "engines": {
-    "node": "^16.13.0 || >=18.10.0",
-    "yarn": ">=1.21.1 <2",
+    "node": "^14.15.0 || >=16.10.0",
+    "yarn": ">=1.22.4 <2",
     "npm": "Please use yarn instead of NPM to install dependencies"
   },
   "dependencies": {
@@ -24,16 +24,16 @@
     "@angular/forms": "^14.0.0",
     "@angular/platform-browser": "^14.0.0",
     "@angular/platform-browser-dynamic": "^14.0.0",
-    "@angular/pwa": "0.5.3",
+    "@angular/pwa": "^14.0.0",
     "@angular/router": "^14.0.0",
     "@angular/service-worker": "^14.0.0",
     "@popperjs/core": "^2.11.6",
     "@uxwb/services": "^14.0.0",
-    "bootstrap": "5.3.0-alpha1",
+    "bootstrap": "^5.0.0",
     "ngx-toastr": "^15.2.2",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
-    "zone.js": "~0.11.4"
+    "zone.js": "~0.12.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^14.0.0",

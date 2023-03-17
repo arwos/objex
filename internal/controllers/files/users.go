@@ -1,4 +1,4 @@
-package controller
+package files
 
 //go:generate easyjson
 

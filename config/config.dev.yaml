@@ -36,3 +36,5 @@ store_providers:
       code: loc
       prefix: ""
       setting: "/tmp/artifacts"
+
+npm_cache: "/tmp/npm"

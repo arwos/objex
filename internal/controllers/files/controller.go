@@ -1,4 +1,4 @@
-package controller
+package files
 
 import (
 	"github.com/arwos/artifactory/internal/providers"
@@ -37,10 +37,10 @@ func NewController(
 func (v *Controller) Up() error {
 	route := v.routes.Main()
 
-	route.Post("/{storage}/#", v.UploadFile)
-	route.Get("/{storage}/#", v.DownloadFile)
+	route.Post("/files/{storage}/#", v.UploadFile)
+	route.Get("/files/{storage}/#", v.DownloadFile)
 
-	apiV1 := route.Collection("/api/v1")
+	apiV1 := route.Collection("/files/api/v1")
 	apiV1.Post("users/new", v.CreateUser)
 	apiV1.Post("users/group/add", v.AddUserGroup)
 	apiV1.Post("groups/new", v.CreateGroup)

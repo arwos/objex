@@ -1,0 +1,28 @@
+package: arwos-artifactory
+source: artifactory
+version: 1:0.0.1
+architecture:
+    - amd64
+maintainer: Arwos <artifactory@arwos.ru>
+homepage: https://arwos.ru/artifactory
+description:
+    - Files artifactory store
+section: utils
+priority: optional
+control:
+    depends:
+        - systemd
+        - adduser (>= 3.40)
+        - mysql-server-8.0 (>= 8.0)
+    conffiles:
+        - /etc/artifactory/config.yaml
+    preinst: scripts/preinst.sh
+    postinst: scripts/postinst.sh
+    prerm: scripts/prerm.sh
+    postrm: scripts/postrm.sh
+    build: devtool build --arch=%arch%
+data:
+    bin/artifactory: build/artifactory_%arch%
+    etc/artifactory/config.yaml: config/config.yaml
+    etc/systemd/system/artifactory.service: init/artifactory.service
+    var/lib/artifactory/migrations: '~./migrations'

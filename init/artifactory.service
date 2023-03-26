@@ -2,8 +2,8 @@
 After=network.target
 
 [Service]
-User=root
-Group=root
+User=artifactory
+Group=artifactory
 Restart=on-failure
 RestartSec=30s
 Type=simple

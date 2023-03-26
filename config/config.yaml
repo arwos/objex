@@ -1,19 +1,19 @@
 env: dev
 pid: ""
 level: 4
-log: /dev/stdout
+log: /var/log/artifactory.log
 
 http:
   main:
-    addr: 127.0.0.1:8080
+    addr: 127.0.0.1:10011
 
 mysql:
   - name: main
-    host: 127.0.0.1
+    host: localhost
     port: 3306
-    schema: test
-    user: test
-    password: test
+    schema: artifactory
+    user: artifactory
+    password: "new-artifactory-user-passwd"
     timezone: UTC
     txisolevel: ""
     charset: utf8mb4
@@ -28,15 +28,15 @@ mysql:
     other_params: ""
 mysql_migrate:
   - pool: main
-    dir: ./migrations
+    dir: "/var/lib/artifactory/migrations/"
 
 store_providers:
   - name: Local
     type: local
     code: loc
     prefix: ""
-    setting: "/tmp/artifacts"
+    setting: "/var/lib/artifactory/files"
 
 npm_packages:
   ssl: false
-  proxy_cache: "/tmp/npm"
+  proxy_cache: "/var/lib/artifactory/npm"

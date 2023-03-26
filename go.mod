@@ -1,6 +1,6 @@
 module github.com/arwos/artifactory
 
-go 1.19
+go 1.17
 
 require (
 	github.com/deweppro/go-sdk v1.1.6
@@ -10,6 +10,7 @@ require (
 	github.com/mailru/easyjson v0.7.7
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.7.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -23,5 +24,4 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

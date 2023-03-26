@@ -1,4 +1,4 @@
-package rw
+package iofiles
 
 import (
 	"os"

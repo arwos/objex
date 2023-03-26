@@ -2,21 +2,18 @@ package npm
 
 import (
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/arwos/artifactory/internal/pkg/iofiles"
+	"github.com/arwos/artifactory/internal/pkg/locker"
+	"github.com/arwos/artifactory/internal/pkg/network"
+	"github.com/deweppro/go-sdk/file"
 	"github.com/deweppro/goppy/plugins"
 	"github.com/deweppro/goppy/plugins/web"
-)
-
-const (
-	yarnRegistry = "https://registry.yarnpkg.com"
-	npmRegistry  = "https://registry.npmjs.org"
 )
 
 var Plugin = plugins.Plugin{
@@ -26,38 +23,39 @@ var Plugin = plugins.Plugin{
 
 type Controller struct {
 	routes web.RouterPool
-	cli    *http.Client
+	cli    network.Request
 	conf   *Config
+	mux    locker.Locker
 }
 
 func NewController(r web.RouterPool, conf *Config) *Controller {
 	return &Controller{
 		routes: r,
-		cli:    http.DefaultClient,
+		cli:    network.NewRequest(),
 		conf:   conf,
+		mux:    locker.New(),
 	}
 }
 
 func (v *Controller) Up() error {
 	route := v.routes.Main()
 
-	route.Get("/yarn/#", v.Yarn)
-	route.Get("/npm/#", v.Npm)
+	route.Get(registry, v.IndexYarn)
 
-	route.Get("/yarn", v.Index)
-	route.Get("/npm", v.Index)
+	route.Get(registry+"/#", v.YarnMeta)
+	route.Get(registryFiles+"/#", v.Files)
 
-	return os.MkdirAll(v.conf.Folder, 0755)
+	return os.MkdirAll(v.conf.Packages.ProxyCache, 0755)
 }
 
 func (v *Controller) Down() error {
 	return nil
 }
 
-func (v *Controller) Index(c web.Context) {
-	hostNpm := "http://" + c.URL().Host + "/yarn"
+func (v *Controller) IndexYarn(c web.Context) {
+	hostNpm := v.conf.URISchema() + c.URL().Host + registry
 	data := `
-yarn config set registry %s
+yarn config set registryYarn %s
 
 or
 
@@ -66,55 +64,42 @@ YARN_REGISTRY="%s" yarn install
 or
 
 .yarnrc:
-registry "%s"
+registryYarn "%s"
 
 `
 	c.String(200, data, hostNpm, hostNpm, hostNpm)
 }
 
-func (v *Controller) Npm(c web.Context) {
-	filename := strings.TrimPrefix(c.URL().Path, "/npm")
-	fmt.Println(c.Request().Method, filename)
+func (v *Controller) Files(c web.Context) {
+	path := strings.TrimPrefix(c.URL().Path, registryFiles)
+	cacheFile := v.conf.Packages.ProxyCache + path
 
-	req, err := http.NewRequestWithContext(c.Context(), c.Request().Method, npmRegistry+filename, nil)
+	fmt.Println(c.Request().Method, path, cacheFile)
+
+	if !file.Exist(cacheFile) {
+		mux := v.mux.Mutex(path)
+		mux.Lock()
+		err := v.cli.Call(c.Context(), c.Request(), registryURI+path, nil,
+			func(code int, r io.Reader, _ string) error {
+				if code != http.StatusOK {
+					return fmt.Errorf("status code: %d", code)
+				}
+
+				return iofiles.WriteFile(cacheFile, r, iofiles.CodecRaw)
+			})
+		mux.Unlock()
+		if err != nil {
+			c.Error(http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	dist, err := os.OpenFile(cacheFile, os.O_RDONLY, 0644)
 	if err != nil {
-		c.Error(500, err)
+		c.Error(http.StatusBadRequest, err)
 		return
 	}
-
-	h := c.Request().Header
-	for k := range h {
-		req.Header.Set(k, h.Get(k))
-	}
-
-	resp, err := v.cli.Do(req)
-	if err != nil {
-		c.Error(500, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		c.String(resp.StatusCode, "bad request")
-		return
-	}
-
-	if err = os.MkdirAll(filepath.Dir(v.conf.Folder+filename), 0755); err != nil {
-		c.Error(500, err)
-		return
-	}
-
-	if err = writeBodyToFile(v.conf.Folder+filename, resp.Body, resp.Header.Get("Content-Encoding")); err != nil {
-		c.Error(500, err)
-		return
-	}
-
-	dist, err := os.OpenFile(v.conf.Folder+filename, os.O_RDONLY, 0644)
-	if err != nil {
-		c.Error(500, err)
-		return
-	}
-	defer dist.Close()
+	defer dist.Close() //nolint: errcheck
 
 	c.Response().Header().Set("Content-Type", "application/octet-stream")
 	c.Response().WriteHeader(200)
@@ -123,81 +108,42 @@ func (v *Controller) Npm(c web.Context) {
 	}
 }
 
-func (v *Controller) Yarn(c web.Context) {
-	path := strings.TrimPrefix(c.URL().Path, "/yarn")
-	fmt.Println(c.Request().Method, path)
+func (v *Controller) YarnMeta(c web.Context) {
+	path := strings.TrimPrefix(c.URL().Path, registry)
+	metaFile := v.conf.Packages.ProxyCache + path + "/meta.json"
 
-	req, err := http.NewRequestWithContext(c.Context(), c.Request().Method, yarnRegistry+path, nil)
+	fmt.Println(c.Request().Method, path, metaFile)
+
+	if !file.Exist(metaFile) {
+		mux := v.mux.Mutex(path)
+		mux.Lock()
+		err := v.cli.Call(c.Context(), c.Request(), registryURI+path, nil,
+			func(code int, r io.Reader, codec string) error {
+				if code != http.StatusOK {
+					return fmt.Errorf("status code: %d", code)
+				}
+
+				return iofiles.WriteFile(metaFile, r, codec)
+			})
+		mux.Unlock()
+		if err != nil {
+			c.Error(http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	b, err := os.ReadFile(metaFile)
 	if err != nil {
 		c.Error(500, err)
 		return
 	}
 
-	h := c.Request().Header
-	for k := range h {
-		req.Header.Set(k, h.Get(k))
-	}
-
-	resp, err := v.cli.Do(req)
-	if err != nil {
-		c.Error(500, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		c.String(resp.StatusCode, "bad request")
-		return
-	}
-
-	if err = os.MkdirAll(v.conf.Folder+path, 0755); err != nil {
-		c.Error(500, err)
-		return
-	}
-
-	pathMeta := v.conf.Folder + path + "/meta.json"
-
-	if err = writeBodyToFile(pathMeta, resp.Body, resp.Header.Get("Content-Encoding")); err != nil {
-		c.Error(500, err)
-		return
-	}
-
-	b, err := os.ReadFile(pathMeta)
-	if err != nil {
-		c.Error(500, err)
-		return
-	}
-
-	hostNpm := "http://" + c.URL().Host + "/npm"
-	b = bytes.ReplaceAll(b, []byte(npmRegistry), []byte(hostNpm))
+	hostNpm := v.conf.URISchema() + c.URL().Host + registryFiles
+	b = bytes.ReplaceAll(b, []byte(registryURI), []byte(hostNpm))
 
 	c.Response().Header().Set("Content-Type", "application/json")
-	c.Response().WriteHeader(resp.StatusCode)
+	c.Response().WriteHeader(http.StatusOK)
 	if _, err = c.Response().Write(b); err != nil {
 		fmt.Println(err)
-	}
-}
-
-func writeBodyToFile(path string, rc io.ReadCloser, codec string) error {
-	defer rc.Close()
-	dist, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer dist.Close()
-
-	switch codec {
-	case "":
-		_, err = io.Copy(dist, rc)
-		return err
-	case "gzip":
-		zr, err := gzip.NewReader(rc)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(dist, zr)
-		return err
-	default:
-		return fmt.Errorf("invalid codec")
 	}
 }

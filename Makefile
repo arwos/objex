@@ -25,6 +25,12 @@ pre-commite: setup lint build tests
 .PHONY: ci
 ci: install setup lint build tests
 
-.PHONY: local
-local:
+.PHONY: run
+run:
 	go run ./cmd/artifactory/main.go --config=./config/config.dev.yaml
+
+docker:
+	docker-compose up -d
+
+deb:
+	deb-builder build

@@ -51,7 +51,7 @@ func (v *Storages) Get(ctx context.Context, name string) (*Store, error) {
 
 func (v *Storages) reloadStoreFromDB(ctx context.Context, name string) (*Store, error) {
 	var (
-		sid, lifetime int64
+		sid, lifetime uint64
 		code          string
 	)
 	err := v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
@@ -72,13 +72,13 @@ func (v *Storages) reloadStoreFromDB(ctx context.Context, name string) (*Store, 
 		Lifetime: lifetime,
 		Name:     name,
 		Code:     code,
-		Groups:   make(map[int64]struct{}, 0),
+		Groups:   make(map[uint64]struct{}, 0),
 	}
 
 	err = v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
 		q.SQL("SELECT `group_id` FROM `storage_group` WHERE `storage_id` = ? LIMIT 1;", s.ID)
 		q.Bind(func(bind orm.Scanner) error {
-			var gid int64
+			var gid uint64
 			if err = bind.Scan(&gid); err != nil {
 				return err
 			}

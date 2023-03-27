@@ -65,3 +65,20 @@ type (
 		DataSize int64 `json:"data_size"`
 	}
 )
+
+type (
+	Publish struct {
+		ID          string                `json:"_id"`
+		Name        string                `json:"name"`
+		DistTags    DistTags              `json:"dist-tags"`
+		Versions    map[string]Version    `json:"versions"`
+		Readme      string                `json:"readme"`
+		Attachments map[string]Attachment `json:"_attachments"`
+	}
+
+	Attachment struct {
+		ContentType string `json:"content_type"`
+		Data        string `json:"data"`
+		Length      int    `json:"length"`
+	}
+)

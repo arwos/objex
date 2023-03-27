@@ -1,5 +1,11 @@
 package npm
 
+import (
+	"fmt"
+
+	"github.com/deweppro/goppy/plugins/web"
+)
+
 const (
 	registryURI = "https://registry.npmjs.org"
 
@@ -29,4 +35,11 @@ func (v *Config) URISchema() string {
 		return "https://"
 	}
 	return "http://"
+}
+
+func dump(c web.Context) {
+	fmt.Println(c.URL().Path)
+	b := make([]byte, 0)
+	err := c.BindBytes(&b)
+	fmt.Println(err, string(b))
 }

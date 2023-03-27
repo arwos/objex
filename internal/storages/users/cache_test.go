@@ -3,18 +3,17 @@ package users_test
 import (
 	"testing"
 
-	"github.com/arwos/artifactory/internal/storages/users"
 	"github.com/deweppro/go-sdk/random"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUnit_NewCache(t *testing.T) {
-	c := users.NewCache(10)
+	c := NewUserCache(10)
 	u, ok := c.Get("u")
 	require.False(t, ok)
-	require.Equal(t, users.User{}, u)
+	require.Equal(t, User{}, u)
 
-	nu := users.User{
+	nu := User{
 		ID:       0,
 		Login:    "u",
 		Passwd:   nil,

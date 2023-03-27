@@ -1,45 +1,41 @@
-package files
+package api
 
 import (
-	"github.com/arwos/artifactory/internal/providers"
-	"github.com/arwos/artifactory/internal/storages/files"
-	"github.com/arwos/artifactory/internal/storages/storage"
+	"github.com/arwos/artifactory/internal/pkg/middlewares"
 	"github.com/arwos/artifactory/internal/storages/users"
 	"github.com/deweppro/goppy/plugins"
 	"github.com/deweppro/goppy/plugins/web"
 )
 
 var Plugin = plugins.Plugin{
+	Config: &Config{},
 	Inject: NewController,
 }
 
 type Controller struct {
-	users     *users.Users
-	providers providers.Providers
-	routes    web.RouterPool
-	store     *storage.Storages
-	files     *files.Files
+	conf   *Config
+	users  *users.Users
+	routes web.RouterPool
 }
 
-func NewController(
-	r web.RouterPool, u *users.Users, p providers.Providers,
-	s *storage.Storages, f *files.Files,
-) *Controller {
+func NewController(r web.RouterPool, u *users.Users, c *Config) *Controller {
 	return &Controller{
-		users:     u,
-		providers: p,
-		routes:    r,
-		store:     s,
-		files:     f,
+		users:  u,
+		routes: r,
+		conf:   c,
 	}
 }
 
 func (v *Controller) Up() error {
 	route := v.routes.Main()
 
-	route.Post("/files/{storage}/#", v.UploadFile)
-	route.Get("/files/{storage}/#", v.DownloadFile)
+	v.InjectUIRoutes(route)
 
+	v.InjectAuthRoutes(route.Collection("/api/auth", middlewares.TokenDetectMiddleware(v.conf.Settings.CookieName)))
+
+	//route.Post("/files/{storage}/#", v.UploadFile)
+	//route.Get("/files/{storage}/#", v.DownloadFile)
+	//
 	//apiV1 := route.Collection("/files/api/v1")
 	//apiV1.Post("users/new", v.CreateUser)
 	//apiV1.Post("users/group/add", v.AddUserGroup)

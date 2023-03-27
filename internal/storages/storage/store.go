@@ -1,15 +1,15 @@
 package storage
 
 type Store struct {
-	ID       int64
-	Lifetime int64
+	ID       uint64
+	Lifetime uint64
 	Name     string
 	Code     string
-	Groups   map[int64]struct{}
+	Groups   map[uint64]struct{}
 }
 
-func (v Store) GetGroups() []int64 {
-	result := make([]int64, 0, len(v.Groups))
+func (v Store) GetGroups() []uint64 {
+	result := make([]uint64, 0, len(v.Groups))
 	for g := range v.Groups {
 		result = append(result, g)
 	}

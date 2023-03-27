@@ -2,75 +2,28 @@ package users
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha512"
 	"fmt"
-	"time"
 
-	"github.com/arwos/artifactory/internal/proxy/db"
-	"github.com/deweppro/go-sdk/app"
 	"github.com/deweppro/go-sdk/orm"
-	"github.com/deweppro/go-sdk/random"
-	"github.com/deweppro/go-sdk/routine"
-	"github.com/deweppro/goppy/plugins"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var Plugin = plugins.Plugin{
-	Inject: NewUsers,
-}
-
-type (
-	Users struct {
-		db db.DB
-
-		cache *Cache
-	}
-
-	User struct {
-		ID       int64
-		Login    string
-		Passwd   []byte
-		TempKey  []byte
-		TempHash []byte
-		Groups   map[int64]struct{}
-	}
-)
-
-func NewUsers(db db.DB) *Users {
-	return &Users{
-		db:    db,
-		cache: NewCache(1000),
-	}
-}
-
-func (v *Users) Up(ctx app.Context) error {
-	routine.Interval(ctx.Context(), 60*time.Minute, func(ctx context.Context) {
-		v.cache.FlushAll()
-	})
-	return nil
-}
-
-func (v *Users) Down() error {
-	return nil
-}
-
-func (v *Users) Get(ctx context.Context, login string) (User, error) {
-	u, ok := v.cache.Get(login)
+func (v *Users) GetUserByLogin(ctx context.Context, login string) (User, error) {
+	u, ok := v.cache.GetByLogin(login)
 	if ok {
 		return u, nil
 	}
-	u, err := v.reloadUserFromDB(ctx, login)
+	u, t, err := v.findUserByLogin(ctx, login)
 	if err != nil {
 		return User{}, err
 	}
-	v.cache.Set(u)
+	v.cache.Setup(u, t...)
 	return u, nil
 }
 
-func (v *Users) reloadUserFromDB(ctx context.Context, login string) (User, error) {
+func (v *Users) findUserByLogin(ctx context.Context, login string) (User, []string, error) {
 	var (
-		uid             int64
+		uid             uint64
 		ulogin, upasswd string
 	)
 	err := v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
@@ -80,25 +33,23 @@ func (v *Users) reloadUserFromDB(ctx context.Context, login string) (User, error
 		})
 	})
 	if err != nil {
-		return User{}, err
+		return User{}, nil, err
 	}
 	if uid == 0 {
-		return User{}, fmt.Errorf("user not found")
+		return User{}, nil, fmt.Errorf("user not found")
 	}
 
 	u := User{
-		ID:       uid,
-		Login:    login,
-		Passwd:   []byte(upasswd),
-		TempKey:  random.Bytes(64),
-		TempHash: nil,
-		Groups:   make(map[int64]struct{}, 0),
+		ID:     uid,
+		Login:  login,
+		Passwd: []byte(upasswd),
+		Groups: make(map[uint64]struct{}, 0),
 	}
 
 	err = v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
-		q.SQL("SELECT `group_id` FROM `user_group` WHERE `user_id` = ? LIMIT 1;", uid)
+		q.SQL("SELECT `group_id` FROM `user_group` WHERE `user_id` = ?;", uid)
 		q.Bind(func(bind orm.Scanner) error {
-			var gid int64
+			var gid uint64
 			if err = bind.Scan(&gid); err != nil {
 				return err
 			}
@@ -107,40 +58,42 @@ func (v *Users) reloadUserFromDB(ctx context.Context, login string) (User, error
 		})
 	})
 	if err != nil {
-		return User{}, err
+		return User{}, nil, err
 	}
-	return u, nil
+
+	tokens := make([]string, 0, 10)
+	err = v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
+		q.SQL("SELECT `token` FROM `user_token` WHERE `user_id` = ?;", uid)
+		q.Bind(func(bind orm.Scanner) error {
+			var token string
+			if err = bind.Scan(&token); err != nil {
+				return err
+			}
+			tokens = append(tokens, token)
+			return nil
+		})
+	})
+	if err != nil {
+		return User{}, nil, err
+	}
+
+	return u, tokens, nil
 }
 
 func (v *Users) ValidateUserPasswd(ctx context.Context, login, passwd string) bool {
-	u, err := v.Get(ctx, login)
+	u, err := v.GetUserByLogin(ctx, login)
 	if err != nil {
 		return false
 	}
 
 	bp := []byte(passwd)
-
-	mac := hmac.New(sha512.New, u.TempKey)
-	mac.Write(bp)
-	hash := mac.Sum(nil)
-
-	if len(u.TempHash) > 0 && hmac.Equal(u.TempHash, hash) {
-		return true
-	}
-
 	err = bcrypt.CompareHashAndPassword(u.Passwd, bp)
-	if err != nil {
-		return false
-	}
 
-	u.TempHash = hash
-	v.cache.Set(u)
-
-	return true
+	return err == nil
 }
 
-func (v *Users) HasUserInGroup(ctx context.Context, login string, groups ...int64) bool {
-	u, err := v.Get(ctx, login)
+func (v *Users) HasUserInGroup(ctx context.Context, login string, groups ...uint64) bool {
+	u, err := v.GetUserByLogin(ctx, login)
 	if err != nil {
 		return false
 	}
@@ -208,7 +161,7 @@ func (v *Users) ListGroup(ctx context.Context) (map[int64]string, error) {
 }
 
 func (v *Users) DeleteUserFromGroups(ctx context.Context, login string, groups ...int64) error {
-	u, err := v.Get(ctx, login)
+	u, err := v.GetUserByLogin(ctx, login)
 	if err != nil {
 		return err
 	}
@@ -223,7 +176,7 @@ func (v *Users) DeleteUserFromGroups(ctx context.Context, login string, groups .
 }
 
 func (v *Users) AppendUserToGroups(ctx context.Context, login string, groups ...int64) error {
-	u, err := v.Get(ctx, login)
+	u, err := v.GetUserByLogin(ctx, login)
 	if err != nil {
 		return err
 	}

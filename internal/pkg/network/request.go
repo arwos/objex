@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -42,7 +41,6 @@ func (v *request) CleanHeaders() {
 
 func (v *request) Call(ctx context.Context, r *http.Request, uri string, body io.Reader,
 	call func(code int, r io.Reader, codec string) error) error {
-	fmt.Println("download", uri, r.Header)
 	req, err := http.NewRequestWithContext(ctx, r.Method, uri, body)
 	if err != nil {
 		return err

@@ -3,6 +3,10 @@ pid: ""
 level: 4
 log: /dev/stdout
 
+api_settings:
+  cookie_name: at
+  used_https: false
+
 http:
   main:
     addr: 127.0.0.1:8080
@@ -10,7 +14,7 @@ http:
 mysql:
   - name: main
     host: 127.0.0.1
-    port: 3306
+    port: 13306
     schema: test
     user: test
     password: test

@@ -1,0 +1,78 @@
+{
+  "_id": "@new/application",
+  "name": "@new/application",
+  "dist-tags": {
+    "latest": "0.0.1"
+  },
+  "versions": {
+    "0.0.1": {
+      "name": "@new/application",
+      "version": "0.0.1",
+      "private": false,
+      "license": "MIT",
+      "scripts": {
+        "ng": "ng",
+        "start": "ng serve --proxy-config proxy.conf.json",
+        "build": "ng build",
+        "watch": "ng build --watch --configuration development",
+        "lint": "ng lint lib --fix",
+        "icon-build": "pwa-asset-generator src/logo.svg src/assets/icons -m src/manifest.webmanifest -v /assets/icons -f -c -w -s false -o false -p 2%"
+      },
+      "engines": {
+        "node": "^14.15.0 || >=16.10.0",
+        "yarn": ">=1.22.4 <2",
+        "npm": "Please use yarn instead of NPM to install dependencies"
+      },
+      "dependencies": {
+        "@angular/animations": "^14.0.0",
+        "@angular/common": "^14.0.0",
+        "@angular/compiler": "^14.0.0",
+        "@angular/core": "^14.0.0",
+        "@angular/forms": "^14.0.0",
+        "@angular/platform-browser": "^14.0.0",
+        "@angular/platform-browser-dynamic": "^14.0.0",
+        "@angular/pwa": "^14.0.0",
+        "@angular/router": "^14.0.0",
+        "@angular/service-worker": "^14.0.0",
+        "@popperjs/core": "^2.11.6",
+        "@uxwb/services": "^14.0.0",
+        "bootstrap": "^5.0.0",
+        "ngx-toastr": "^15.2.2",
+        "rxjs": "~7.5.0",
+        "tslib": "^2.3.0",
+        "zone.js": "~0.12.0"
+      },
+      "devDependencies": {
+        "@angular-devkit/build-angular": "^14.0.0",
+        "@angular-eslint/builder": "^14.0.0",
+        "@angular-eslint/eslint-plugin": "^14.0.0",
+        "@angular-eslint/eslint-plugin-template": "^14.0.0",
+        "@angular-eslint/schematics": "^14.0.0",
+        "@angular-eslint/template-parser": "^14.0.0",
+        "@angular/cli": "^14.0.0",
+        "@angular/compiler-cli": "^14.0.0",
+        "@typescript-eslint/eslint-plugin": "^5.0.0",
+        "@typescript-eslint/parser": "^5.0.0",
+        "eslint": "^7.2.0",
+        "eslint-config-airbnb-typescript": "^17.0.0",
+        "eslint-plugin-import": "^2.0.0",
+        "pwa-asset-generator": "^6.2.1",
+        "typescript": "~4.7.2"
+      },
+      "_id": "@new/application@0.0.1",
+      "dist": {
+        "shasum": "7c137b9789514448c1883ed39e5f9dafbd5985df",
+        "integrity": "sha512-LGLTCFTm31mkAdPYlItkorw6tddqaOXgGPlCQDVhIHbLs+IdKsQ3mmvJQPkXZpv013BepfeJeTANRCAz4X6sUw==",
+        "tarball": "http://127.0.0.1:8080/@new/application/-/@new/application-0.0.1.tgz"
+      }
+    }
+  },
+  "readme": "",
+  "_attachments": {
+    "@new/application-0.0.1.tgz": {
+      "content_type": "application/octet-stream",
+      "data": "111111111",
+      "length": 80373
+    }
+  }
+}

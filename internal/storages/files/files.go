@@ -95,7 +95,7 @@ func (v *Files) SearchByProps(ctx context.Context, sid int64, props url.Values) 
 	return result, nil
 }
 
-func (v *Files) AddFile(ctx context.Context, sid int64, filename, hash string, props url.Values) error {
+func (v *Files) AddFile(ctx context.Context, sid uint64, filename, hash string, props url.Values) error {
 	return v.db.Main().TransactionContext("", ctx, func(v orm.Tx) {
 		var id int64
 		v.Exec(func(e orm.Executor) {
@@ -122,7 +122,7 @@ func (v *Files) AddFile(ctx context.Context, sid int64, filename, hash string, p
 	})
 }
 
-func (v *Files) HasFile(ctx context.Context, sid int64, filename string) bool {
+func (v *Files) HasFile(ctx context.Context, sid uint64, filename string) bool {
 	var id int64
 	err := v.db.Main().QueryContext("", ctx, func(q orm.Querier) {
 		q.SQL("SELECT `id` FROM `files` WHERE `storage_id` = ? AND `name` = ?;", sid, filename)

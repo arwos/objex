@@ -3,9 +3,9 @@ module github.com/arwos/artifactory
 go 1.17
 
 require (
-	github.com/deweppro/go-sdk v1.1.6
+	github.com/deweppro/go-sdk v1.1.7
 	github.com/deweppro/go-static v1.3.0
-	github.com/deweppro/goppy v0.11.4
+	github.com/deweppro/goppy v0.11.5
 	github.com/jlaffaye/ftp v0.1.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/stretchr/testify v1.8.2

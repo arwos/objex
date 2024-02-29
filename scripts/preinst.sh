@@ -1,12 +1,12 @@
 #!/bin/bash
 
 
-if ! [ -d /var/lib/artifactory/ ]; then
-    mkdir /var/lib/artifactory
+if ! [ -d /var/lib/objex/ ]; then
+    mkdir /var/lib/objex
 fi
 
-if [ -f "/etc/systemd/system/artifactory.service" ]; then
-    systemctl stop artifactory
-    systemctl disable artifactory
+if [ -f "/etc/systemd/system/objex.service" ]; then
+    systemctl stop objex
+    systemctl disable objex
     systemctl daemon-reload
 fi

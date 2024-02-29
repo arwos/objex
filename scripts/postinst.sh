@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-if [ -f "/etc/systemd/system/artifactory.service" ]; then
-    systemctl start artifactory
-    systemctl enable artifactory
+if [ -f "/etc/systemd/system/objex.service" ]; then
+    systemctl start objex
+    systemctl enable objex
     systemctl daemon-reload
 fi

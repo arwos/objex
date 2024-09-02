@@ -1,2 +1,0 @@
-# artifactory
-Artifact storage

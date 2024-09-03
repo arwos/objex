@@ -3,7 +3,7 @@ package clients
 import "io"
 
 type Client interface {
-	Connect(address string, opts ...any) (err error)
+	Connect(address string, opt ...any) (err error)
 	Free() (n int64, err error)
 	Close() (err error)
 
